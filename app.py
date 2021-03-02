@@ -2,7 +2,7 @@
 import c3d
 
 file_name = 'Trial02.c3d'
-path = 'dataset/' + file_name
+path = 'datasets/' + file_name
 
 header = c3d.Header(open(path, 'rb'))
 frame_rate = header.frame_rate
@@ -22,7 +22,7 @@ app = Flask(__name__)   # Flask 객체 인스턴스 생성
 
 @app.route('/') # 접속하는 url
 def index():
-    return render_template('test.html', frame_rate=frame_rate, frames=frames)
+    return render_template('index.html', frame_rate=frame_rate, frames=frames)
 
 if __name__ == "__main__":
     app.run(debug=True)
