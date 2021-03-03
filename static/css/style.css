@@ -1,0 +1,82 @@
+html, body {
+	color: #222222;
+	background: #808080;
+	font-size: 12px;
+	font-family: Arial, cursive;
+	margin: 0px;
+	padding: 0px;
+	width: 100%;
+	height: 100%;
+}
+
+img {
+	object-fit: cover;
+}
+
+#top {
+	color : #000000;
+	background: #5465fa;
+	overflow: auto;
+	font-size: 30px;
+	text-align: center;
+}
+
+#right {
+	color : #222222;
+	background: #808080;
+	overflow: auto;
+	width: 350px;
+	float: right;
+	text-align: center;
+	/* vertical-align: middle; */
+}
+
+canvas {
+	display: block;
+}
+
+#checkbtn {
+    width: 100px;
+    background-color: #160e90;
+    border: none;
+    color:#fff;
+    padding: 15px 0;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 15px;
+    margin: 4px;
+    cursor: pointer;
+	border-radius:10px;
+}
+
+#playbtn {
+	background-image: url("../images/button_play.png");
+	background-repeat: no-repeat;
+	background-size: contain;
+	border: none;
+	width: 100px;
+	height: 100px;
+	cursor: pointer;
+}
+
+ #pausebtn {
+	display: none;
+	background-image: url("../images/button_pause.png");
+	background-repeat: no-repeat;
+	background-size: contain;
+	border: none;
+	width: 100px;
+	height: 100px;
+	cursor: pointer;
+}
+
+#stopbtn {
+	background-image: url("../images/button_stop.png");
+	background-repeat: no-repeat;
+	background-size: contain;
+	border: none;
+	width: 100px;
+	height: 100px;
+	cursor: pointer;
+}

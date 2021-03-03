@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/test.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
     <title>C3D File Viewer</title>
 </head>
 <body>
@@ -15,8 +15,12 @@
     <div id="right">
         <div>
             <div> Chack your display frame rate </div>
-            <input type="button" id="checkbtn" value="Check" onclick="check_disFrameRate();" />
-            <input type="button" id="startbtn" value="START" disabled="true" onclick="start();" />
+            <input type="button" id="checkbtn" value="Check" onclick="check_disFrameRate();"/>
+            <div id="btns">
+                <input type="button" id="playbtn" disabled="true" onclick="play();"/>
+                <input type="button" id="pausebtn" onclick="pause();"/>
+                <input type="button" id="stopbtn" onclick="stop();"/>
+            </div>
         </div>
     </div>
 
@@ -28,9 +32,12 @@
     <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <script>
-        const requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-                                    window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
-        const cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
+        const requestAnimationFrame = window.requestAnimationFrame ||
+                                    window.mozRequestAnimationFrame ||
+                                    window.webkitRequestAnimationFrame ||
+                                    window.msRequestAnimationFrame;
+        const cancelAnimationFrame = window.cancelAnimationFrame ||
+                                    window.mozCancelAnimationFrame;
 
         const offsetHeight = $("#top").height();
         const offsetWidth = $("#right").width();
@@ -43,6 +50,34 @@
             resizeContents();
         });
 
+        // play
+        function play() {
+            $("#playbtn").css("display", "none");
+            $("#pausebtn").css("display", "inline-block");
+            start();
+        }
+
+        // pause and resume playing fuction
+        let paused = false;
+        function pause() {
+            if(!paused) {
+                // If it is playing, set it to pause
+                paused = true;
+                $("#pausebtn").css({"background-image":"url({{ url_for('static', filename='images/button_play.png') }})"}); 	
+            } else {
+                // If it is paused, set it to play
+                paused = false;
+                $("#pausebtn").css({"background-image":"url({{ url_for('static', filename='images/button_pause.png') }})"}); 
+            }
+        }
+
+        // stop
+        function stop() {
+            n = 0;
+            paused = true;
+            $("#pausebtn").css({"background-image":"url({{ url_for('static', filename='images/button_play.png') }})"});
+        }
+
         // Check Display Frame Rate
         let times = [];
         let display_frame_rate = 0;
@@ -50,7 +85,6 @@
         function check_disFrameRate() {
             const check_req = requestAnimationFrame(check_disFrameRate);
             const now = performance.now();
-
             times.push(now);
             if(times[0] <= now - 1000) {
                 while(times[0] <= now - 1000) { // times에 now - 1000 보다 작은 값이 들어가있는 문제...(이유 모름) => 문제 해결
@@ -61,7 +95,7 @@
                 times = [];
                 $("#checkbtn").attr("disabled", true);
                 $("#checkbtn").attr("value", display_frame_rate);
-                $("#startbtn").attr("disabled", false);
+                $("#playbtn").attr("disabled", false);
             }
         }
 
@@ -162,27 +196,33 @@
         function start() {
             if(mocap_frame_rate < display_frame_rate) {
                 setTimeout(function() {
-                    requestAnimationFrame(start);
+                    let animate_req = requestAnimationFrame(start);
                     const points = frames[n];
                     const scene = makeScene(points);
                     
-                    n += 1;
+                    if(!paused) {
+                        // play(not paused)
+                        n += d;
+                    }
+
                     if(n >= frames.length) {	// 처음부터 재시작
                         n = 0;
                     }
                     controls.update();	// 카메라 컨트롤
                     renderer.render(scene, camera);
                 }, 1000 / mocap_frame_rate)
-            }
-
-            else {
-                requestAnimationFrame(start);
+            } else {
+                let animate_req = requestAnimationFrame(start);
                 const k = Math.round(frames.length * display_frame_rate / mocap_frame_rate);
                 const d = (frames.length - 1) / (k - 1);
                 const points = frames[parseInt(n)];
                 const scene = makeScene(points);
 
-                n += d;
+                if(!paused) {
+                    // play(not paused)
+                    n += d;
+                }
+
                 if(n >= frames.length) {	// 처음부터 재시작
                     n = 0;
                 }
