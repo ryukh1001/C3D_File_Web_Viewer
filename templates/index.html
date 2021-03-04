@@ -22,6 +22,19 @@
                 <input type="button" id="stopbtn" onclick="stop();"/>
             </div>
         </div>
+
+        <!-- Upload file -->
+        <form id="file_upload" method="post" enctype="multipart/form-data">
+            <input type="file" id="file" name="file" accept=".c3d" onchange="chk_file_format(this)">
+            <div>
+                <input type="button" id="upload-file-btn" value="Upload" onclick="upload_file();"/>
+            </div>
+        </form>
+
+        <!-- Download sample file -->
+        <form action="/download" method="POST" enctype="multipart/form-data">
+            <input type="submit" id="download" value="Download Sample C3D File"/>
+        </form>
     </div>
 
     <!-- canvas -->
@@ -41,6 +54,40 @@
 
         const offsetHeight = $("#top").height();
         const offsetWidth = $("#right").width();
+
+        // upload file
+        function upload_file() {
+            const form_data = new FormData($("#file_upload")[0]);
+            $.ajax({
+                type: "POST",
+                url: "/upload",
+                data: form_data,
+                contentType: false,
+                cache: false,
+                processData: false,
+                success: function(data) {
+                    console.log("Success!");
+                }
+            })
+        }
+
+        // check file format
+        function chk_file_format(file) {
+            console.log("File Changed");
+            const file_format = file.value.split(".")[1];
+            if(file_format != "c3d") {
+                file.value = "";
+                alert("C3D 파일 포맷이 아닙니다.");
+            }
+        }
+        // 크로스브라우징 코드 예시
+        // var agent = navigator.userAgent.toLowerCase();
+        // //파일초기화
+        // if ( (navigator.appName == 'Netscape' && navigator.userAgent.search('Trident') != -1) || (agent.indexOf("msie") != -1) ) {
+        //     $("#file3").replaceWith($("#file3").clone(true));
+        // }else{
+        //     $("#file3").val("");
+        // }
 
         $(document).ready(function(){
             // resize 이벤트가 발생할때마다 사이즈를 조절합니다.
