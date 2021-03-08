@@ -4,12 +4,17 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
     <title>C3D File Viewer</title>
 </head>
 <body>
     <!-- top -->
     <div id="top"> C3D File Viewer </div>
+
+    <!-- canvas -->
+    <canvas id="canvas"></canvas>
+    <!-- <div id="canvas_area">
+    </div> -->
 
     <!-- right -->
     <div id="right">
@@ -37,9 +42,6 @@
         </form>
     </div>
 
-    <!-- canvas -->
-    <canvas id="canvas" width="0" height="0"></canvas>
-
     <!-- JavaScript -->
     <script src="https://threejs.org/build/three.min.js"></script>
     <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
@@ -66,7 +68,10 @@
                 cache: false,
                 processData: false,
                 success: function(data) {
-                    console.log("Success!");
+                    mocap_frame_rate = data.frame_rate;
+                    frames = data.frames;
+                    console.log(mocap_frame_rate);
+                    console.log(frames);
                 }
             })
         }
@@ -110,11 +115,11 @@
             if(!paused) {
                 // If it is playing, set it to pause
                 paused = true;
-                $("#pausebtn").css({"background-image":"url({{ url_for('static', filename='images/button_play.png') }})"}); 	
+                $("#pausebtn").css({"background-image":"url(images/button_play.png)"}); 		
             } else {
                 // If it is paused, set it to play
                 paused = false;
-                $("#pausebtn").css({"background-image":"url({{ url_for('static', filename='images/button_pause.png') }})"}); 
+                $("#pausebtn").css({"background-image":"url(images/button_pause.png)"}); 
             }
         }
 
@@ -122,7 +127,7 @@
         function stop() {
             n = 0;
             paused = true;
-            $("#pausebtn").css({"background-image":"url({{ url_for('static', filename='images/button_play.png') }})"});
+            $("#pausebtn").css({"background-image":"url(images/button_play.png)"});
         }
 
         // Check Display Frame Rate
@@ -163,8 +168,8 @@
         }
 
         // Get Data From Server
-        const mocap_frame_rate = {{frame_rate}};
-        const frames = {{frames}};
+        let mocap_frame_rate = 0;
+        let frames = [];
 
         // 캔버스 정의
         const canvas = $("#canvas")[0];
@@ -259,7 +264,7 @@
                     renderer.render(scene, camera);
                 }, 1000 / mocap_frame_rate)
             } else {
-                let animate_req = requestAnimationFrame(start);
+                let animate_req = requestAnimationFrame(start); //const 안대나??
                 const k = Math.round(frames.length * display_frame_rate / mocap_frame_rate);
                 const d = (frames.length - 1) / (k - 1);
                 const points = frames[parseInt(n)];
