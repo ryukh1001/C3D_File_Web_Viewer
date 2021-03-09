@@ -18,6 +18,7 @@ img {
 	background: #160e90;
 	overflow: auto;
 	font-size: 30px;
+	width: 100%;
 	text-align: center;
 }
 
@@ -26,6 +27,7 @@ img {
 	background: #808080;
 	overflow: auto;
 	width: 350px;
+	height: 100%;
 	float: right;
 	text-align: center;
 	/* vertical-align: middle; */
