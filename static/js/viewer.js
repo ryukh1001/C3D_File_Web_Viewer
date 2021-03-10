@@ -1,3 +1,141 @@
+
+Viewer = function() {
+    this.mocap_frame_rate; // data 객체로 뺌..?
+    this.frames;
+
+    this.canvas = null;
+    this.renderer = null;
+    this.camera = null;
+    this.controller = null;
+    this.paused = false;
+    this.frameNum = null;
+
+    this.MakeScene = function(points) {   // 모델링 함수: Scene 생성
+        // 3차원 Scene 생성
+        const scene = new THREE.Scene();
+
+        // 빛을 생성
+        const light1 = new THREE.DirectionalLight(0xffffff, 1);
+        light1.position.set( 2, 2, 2 );
+        scene.add( light1 );
+
+        // 빛을 생성
+        const light2 = new THREE.DirectionalLight(0xffffff, 1);
+        light2.position.set( -2, -2, -2 );
+        scene.add( light2 );
+
+        // Axis
+        const axesHelper = new THREE.AxesHelper(0.1);
+        axesHelper.position.y = -0.5;
+        scene.add(axesHelper);
+
+        // Grid Floor
+        const floor = new THREE.GridHelper(2, 20);
+        floor.position.y = -0.5;
+        scene.add(floor);
+
+        // Spheres
+        // Sphere Geometry
+        const geometry = new THREE.SphereGeometry(0.003, 32, 32);
+        // Sphere Material
+        const material = new THREE.MeshPhongMaterial({color: 0xFFE800});
+
+        for(var i=0; i<points.length; i++) {
+            let sphere = new THREE.Mesh(geometry, material);
+
+            const x = points[i][0] / 4000;					// 좌표계 변환 -0.5 ~ 0.5
+            const y = (points[i][2] / 4000 * 2 - 1) / 2;		// (원본 데이터 가로,세로,높이 4m 가정)
+            const z = -points[i][1] / 4000;
+            
+            sphere.position.set(x, y, z);
+            scene.add(sphere);
+        }
+
+        return scene;
+    }
+    
+    this.Animate = function() {
+        if(mocap_frame_rate < display_frame_rate) {
+            setTimeout(function() {
+                let animate_req = requestAnimationFrame(this.animate); //this.animate 맞나,,,?
+                const points = frames[n];
+                const scene = makeScene(points);
+                
+                if(!paused) {
+                    // play(not paused)
+                    n += 1;
+                }
+    
+                if(n >= frames.length) {	// 처음부터 재시작
+                    n = 0;
+                }
+                controls.update();	// 카메라 컨트롤
+                renderer.render(scene, camera);
+            }, 1000 / mocap_frame_rate)
+        } else {
+            let animate_req = requestAnimationFrame(this.animate); //const 안대나??
+            const k = Math.round(frames.length * display_frame_rate / mocap_frame_rate);
+            const d = (frames.length - 1) / (k - 1);
+            const points = frames[parseInt(n)];
+            const scene = makeScene(points);
+    
+            if(!paused) {
+                // play(not paused)
+                n += d;
+            }
+    
+            if(n >= frames.length) {	// 처음부터 재시작
+                n = 0;
+            }
+    
+            controls.update();	// 카메라 컨트롤
+            renderer.render(scene, camera);
+        }
+    }
+
+    this.Pause = function() {
+        if(!paused) {
+            // If it is playing, set it to pause
+            this.paused = true;
+            $("#pausebtn").css({"background-image":"url(images/button_play.png)"}); 		
+        } else {
+            // If it is paused, set it to play
+            this.paused = false;
+            $("#pausebtn").css({"background-image":"url(images/button_pause.png)"}); 
+        }
+    }
+
+    this.Stop = function() {
+        this.n = 0;
+        this.paused = true;
+        $("#pausebtn").css({"background-image":"url(images/button_play.png)"});
+    }
+}
+
+Viewer.prototype.Init = function() {    //초기화
+    const canvasId = "canvas";
+    this.canvas = $('#' + canvasId)[0];
+    // this.canvas = document.getElementById(canvasId); //위와 동일\
+
+    this.renderer = new THREE.WebGLRenderer({   
+        canvas
+    });
+    // const width = $(window).width() - offsetWidth;
+    // const height = $(window).height() - offsetHeight;
+    // renderer.setSize( width, height );
+    // document.body.appendChild(renderer.domElement);
+
+    // 카메라 ( 카메라 수직 시야 각도, 가로세로 종횡비율, 시야거리 시작지점, 시야거리 끝지점
+    this.camera = new THREE.PerspectiveCamera( 45, width/height, 0.1, 10 );
+    // 카메라 위치 설정
+    this.camera.position.z = 2;
+    // 카메라와 마우스 상호작용을 위해 OrbitControls를 설정
+    this.controller = new THREE.OrbitControls(camera, renderer.domElement);
+    this.paused = false;
+    this.frameNum = 0;
+    
+}
+
 const requestAnimationFrame = window.requestAnimationFrame ||
                             window.mozRequestAnimationFrame ||
                             window.webkitRequestAnimationFrame ||
@@ -126,6 +264,9 @@ const canvas = $("#canvas")[0];
 // 캔버스 크기 설정
 const width = $(window).width() - offsetWidth;
 const height = $(window).height() - offsetHeight;
+
+$("#canvas").css("width", width);
+$("#canvas").css("height", height);
 
 const renderer = new THREE.WebGLRenderer({
     canvas
