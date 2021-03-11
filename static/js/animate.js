@@ -194,7 +194,7 @@ var n = 0;
 function start() {
     if(mocap_frame_rate < display_frame_rate) {
         setTimeout(function() {
-            let animate_req = requestAnimationFrame(start);
+            requestAnimationFrame(start);
             const points = frames[n];
             const scene = makeScene(points);
             
@@ -210,7 +210,7 @@ function start() {
             renderer.render(scene, camera);
         }, 1000 / mocap_frame_rate)
     } else {
-        let animate_req = requestAnimationFrame(start); //const 안대나??
+        requestAnimationFrame(start); //const 안대나??
         const k = Math.round(frames.length * display_frame_rate / mocap_frame_rate);
         const d = (frames.length - 1) / (k - 1);
         const points = frames[parseInt(n)];
