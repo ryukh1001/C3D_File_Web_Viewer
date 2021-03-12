@@ -11,18 +11,15 @@ const rightId = "right";
 const offsetHeight = $("#" + topId).height();
 const offsetWidth = $("#" + rightId).width();
 
-// Mocap Data
-Mocap = function() {
-    this.frame_rate = null;
-    this.frames = [];
-}
-
 // Viewer Class
 Viewer = function() {
     this.canvas = null;
     this.renderer = null;
     this.camera = null;
     this.controller = null;
+    this.display_frame_rate = null;
+    this.mocap_frame_rate = null;
+    this.frames = [];
     this.paused = false;
     this.frameNum = null;
 }
@@ -33,10 +30,6 @@ Viewer.prototype.Init = function() {    //초기화
 
     const canvasId = "canvas";
     this.canvas = $('#' + canvasId)[0]; // this.canvas = document.getElementById(canvasId); // 동일
-    // this.canvas.css("width", width);
-    // this.canvas.css("height", height);
-    $("#canvas").width(width);
-    $("#canvas").height(height);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
     this.renderer.setSize( width, height );
@@ -98,38 +91,40 @@ Viewer.prototype.MakeScene = function(points) {   // 모델링 함수: Scene 생
 
 // hot to pass parameter to requestAnimationFrame
 // 참고: https://stackoverflow.com/questions/19893336/how-can-i-pass-argument-with-requestanimationframe
-Viewer.prototype.Animate = function(mocap, display_frame_rate) {
-    if(mocap.frame_rate < display_frame_rate) {
+Viewer.prototype.Animate = function() {
+    if(this.mocap_frame_rate < this.display_frame_rate) {
         setTimeout(function() {
-            requestAnimationFrame(function() {
-                const points = mocap.frames[this.frameNum];
-                const scene = this.MakeScene(points);
-                
-                if(!this.paused) {
-                    // play(not paused)
-                    this.frameNum += 1;
-                }
+            requestAnimationFrame(this.Animate.bind(this));
+            const points = this.frames[this.frameNum];
+            console.log("this.frames: ", this.frames);
+            console.log("this.frameNum: ", this.frameNum);
+            console.log(points);
+            const scene = MakeScene(points);
+            
+            if(!this.paused) {
+                // play(not paused)
+                this.frameNum += 1;
+            }
 
-                if(this.frameNum >= mocap.frames.length) {	// go back to first frame
-                    this.frameNum = 0;
-                }
-                this.controller.update();	// 카메라 컨트롤
-                this.renderer.render(scene, this.camera);
-            });
-        }, 1000 / mocap.frame_rate)
+            if(this.frameNum >= this.frames.length) {	// go back to first frame
+                this.frameNum = 0;
+            }
+            this.controller.update();	// 카메라 컨트롤
+            this.renderer.render(scene, this.camera);
+        }, 1000 / this.mocap_frame_rate)
     } else {
-        requestAnimationFrame(this.Animate); //const 안대나??
-        const k = Math.round(mocap.frames.length * display_frame_rate / mocap.frame_rate);
-        const d = (mocap.frames.length - 1) / (k - 1);
-        const points = mocap.frames[parseInt(this.frameNum)];
-        const scene = this.MakeScene(points);
+        requestAnimationFrame(this.Animate.bind(this)); //const 안대나??
+        const k = Math.round(this.frames.length * this.display_frame_rate / this.mocap_frame_rate);
+        const d = (this.frames.length - 1) / (k - 1);
+        const points = this.frames[parseInt(this.frameNum)];
+        const scene = MakeScene(points);
 
         if(!this.paused) {
             // play(not paused)
             this.frameNum += d;
         }
 
-        if(this.frameNum >= mocap.frames.length) {	// go back to first frame
+        if(this.frameNum >= this.frames.length) {	// go back to first frame
             this.frameNum = 0;
         }
 
@@ -187,13 +182,12 @@ function stop() {
 function play() {
     $("#playbtn").css("display", "none");
     $("#pausebtn").css("display", "inline-block");
-    viewer.Animate(mocap, display_frame_rate);
+    viewer.Animate();
 }
 
 
 // Check Display Frame Rate
-let times = [];
-let display_frame_rate = 0;
+const times = [];
 
 function check_disFrameRate() {
     const check_req = requestAnimationFrame(check_disFrameRate);
@@ -204,10 +198,10 @@ function check_disFrameRate() {
             times.shift();
         }
         cancelAnimationFrame(check_req);
-        display_frame_rate = times.length;
-        times = [];
+        viewer.display_frame_rate = times.length;
+        
         $("#checkbtn").attr("disabled", true);
-        $("#checkbtn").attr("value", display_frame_rate);
+        $("#checkbtn").attr("value", viewer.display_frame_rate);
         $("#playbtn").attr("disabled", false);
     }
 }
@@ -233,16 +227,15 @@ function upload_file() {
         cache: false,
         processData: false,
         success: function(data) {
-            mocap.frame_rate = data.frame_rate;
-            mocap.frames = data.frames;
-            console.log(mocap.frame_rate);
-            console.log(mocap.frames);
+            this.mocap_frame_rate = data.frame_rate;
+            this.frames = data.frames;
+            console.log(this.frames);
         }
     })
 }
 
 // 메뉴와 컨텐츠의 높이를 윈도우 높이에서 헤더 부분을 뺀 크기로 지정합니다.
-function resizeContents(viewer) {
+function resizeContents() {
     const setWidth = $(window).width() - offsetWidth;
     const setHeight = $(window).height() - offsetHeight;
 
@@ -258,12 +251,10 @@ function resizeContents(viewer) {
     console.log("success");
 }
 
-var mocap = new Mocap();
 var viewer = new Viewer();
 viewer.Init();
 
 $(document).ready(function(){
-    // var mocap = new Mocap();
 	// var viewer = new Viewer();
 	// viewer.Init();	
 
