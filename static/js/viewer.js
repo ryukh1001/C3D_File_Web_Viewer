@@ -22,6 +22,7 @@ Viewer = function() {
     this.frames = [];
     this.paused = false;
     this.frameNum = null;
+    this.d = null;
 }
 
 Viewer.prototype.Init = function() {    //초기화
@@ -29,7 +30,7 @@ Viewer.prototype.Init = function() {    //초기화
     const height = $(window).height() - offsetHeight;
 
     const canvasId = "canvas";
-    this.canvas = $('#' + canvasId)[0]; // this.canvas = document.getElementById(canvasId); // 동일
+    this.canvas = document.getElementById(canvasId);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
     this.renderer.setSize( width, height );
@@ -89,61 +90,18 @@ Viewer.prototype.MakeScene = function(points) {   // 모델링 함수: Scene 생
     return scene;
 }
 
-// hot to pass parameter to requestAnimationFrame
-// 참고: https://stackoverflow.com/questions/19893336/how-can-i-pass-argument-with-requestanimationframe
-Viewer.prototype.Animate = function() {
-    if(this.mocap_frame_rate < this.display_frame_rate) {
-        setTimeout(function() {
-            requestAnimationFrame(this.Animate.bind(this));
-            const points = this.frames[this.frameNum];
-            console.log("this.frames: ", this.frames);
-            console.log("this.frameNum: ", this.frameNum);
-            console.log(points);
-            const scene = MakeScene(points);
-            
-            if(!this.paused) {
-                // play(not paused)
-                this.frameNum += 1;
-            }
-
-            if(this.frameNum >= this.frames.length) {	// go back to first frame
-                this.frameNum = 0;
-            }
-            this.controller.update();	// 카메라 컨트롤
-            this.renderer.render(scene, this.camera);
-        }, 1000 / this.mocap_frame_rate)
-    } else {
-        requestAnimationFrame(this.Animate.bind(this)); //const 안대나??
-        const k = Math.round(this.frames.length * this.display_frame_rate / this.mocap_frame_rate);
-        const d = (this.frames.length - 1) / (k - 1);
-        const points = this.frames[parseInt(this.frameNum)];
-        const scene = MakeScene(points);
-
-        if(!this.paused) {
-            // play(not paused)
-            this.frameNum += d;
-        }
-
-        if(this.frameNum >= this.frames.length) {	// go back to first frame
-            this.frameNum = 0;
-        }
-
-        this.controller.update();	// 카메라 컨트롤
-        this.renderer.render(scene, this.camera);
+Viewer.prototype.UpdateScene = function() {
+    const points = this.frames[parseInt(this.frameNum)];
+    const scene = this.MakeScene(points);
+    if(!this.paused) {
+        this.frameNum += this.d;
+    } 
+    if(this.frameNum >= this.frames.length) {
+        this.frameNum = 0;
     }
+    this.controller.update();	// 카메라 컨트롤
+    this.renderer.render(scene, this.camera);    
 }
-
-// Pause = function() {
-//     if(!viewer.paused) {
-//         // If it is playing, set it to pause
-//         viewer.paused = true;
-//         $("#pausebtn").css({"background-image":"url(images/button_play.png)"}); 		
-//     } else {
-//         // If it is paused, set it to play
-//         viewer.paused = false;
-//         $("#pausebtn").css({"background-image":"url(images/button_pause.png)"}); 
-//     }
-// }
 
 function pause() {
     if(!viewer.paused) {
@@ -157,34 +115,17 @@ function pause() {
     }
 }
 
-// Stop = function() {
-//     viewer.frameNum = 0;
-//     viewer.paused = true;
-//     $("#pausebtn").css({"background-image":"url(images/button_play.png)"});
-// }
-
 function stop() {
     viewer.frameNum = 0;
     viewer.paused = true;
     $("#pausebtn").css({"background-image":"url(images/button_play.png)"});
 }
 
-// 크로스브라우징 코드 예시
-// var agent = navigator.userAgent.toLowerCase();
-// //파일초기화
-// if ( (navigator.appName == 'Netscape' && navigator.userAgent.search('Trident') != -1) || (agent.indexOf("msie") != -1) ) {
-//     $("#file3").replaceWith($("#file3").clone(true));
-// }else{
-//     $("#file3").val("");
-// }
-
-// play
 function play() {
     $("#playbtn").css("display", "none");
     $("#pausebtn").css("display", "inline-block");
-    viewer.Animate();
+    Animate();
 }
-
 
 // Check Display Frame Rate
 const times = [];
@@ -227,14 +168,30 @@ function upload_file() {
         cache: false,
         processData: false,
         success: function(data) {
-            this.mocap_frame_rate = data.frame_rate;
-            this.frames = data.frames;
-            console.log(this.frames);
+            viewer.mocap_frame_rate = data.frame_rate;
+            viewer.frames = data.frames;
+            if(viewer.mocap_frame_rate < viewer.display_frame_rate) {
+                viewer.d = 1;
+                Animate = function() {
+                    const interval = 1000 / this.mocap_frame_rate;
+                    setTimeout(function() {
+                        requestAnimationFrame(Animate); // Animate만 사용시 => 애니메이션 끊김현상 발생
+                        viewer.UpdateScene();
+                    }, interval);
+                }
+            } else {
+                const k = Math.round(viewer.frames.length * viewer.display_frame_rate / viewer.mocap_frame_rate);
+                viewer.d = (viewer.frames.length - 1) / (k - 1);
+                Animate = function() {
+                    requestAnimationFrame(Animate);
+                    viewer.UpdateScene();
+                }
+            }
         }
     })
 }
 
-// 메뉴와 컨텐츠의 높이를 윈도우 높이에서 헤더 부분을 뺀 크기로 지정합니다.
+// 메뉴와 컨텐츠의 높이를 윈도우 높이에서 헤더 부분을 뺀 크기로 지정
 function resizeContents() {
     const setWidth = $(window).width() - offsetWidth;
     const setHeight = $(window).height() - offsetHeight;
@@ -247,20 +204,12 @@ function resizeContents() {
     viewer.camera.updateProjectionMatrix();
 
     viewer.renderer.setSize(setWidth, setHeight);
-
-    console.log("success");
 }
 
 var viewer = new Viewer();
 viewer.Init();
 
 $(document).ready(function(){
-	// var viewer = new Viewer();
-	// viewer.Init();	
-
-    // resize 이벤트가 발생할때마다 사이즈를 조절합니다.
+    // resize 이벤트가 발생할때마다 사이즈를 조절
     $(window).resize(resizeContents);
-
-    // 처음 페이지가 뜰때 사이즈 조정 부분 입니다.
-    resizeContents();
 });
