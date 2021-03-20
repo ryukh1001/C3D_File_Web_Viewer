@@ -11,15 +11,24 @@ const rightId = "right";
 const offsetHeight = $("#" + topId).height();
 const offsetWidth = $("#" + rightId).width();
 
+// Mocap Data Class
+Mocap = function() {
+    this.frame_rate = null;
+    this.frames = [];
+}
+
+Mocap.prototype.Init = function(frame_rate, frames) { 
+    this.frame_rate = frame_rate;
+    this.frames = frames;
+}
+
 // Viewer Class
 Viewer = function() {
     this.canvas = null;
     this.renderer = null;
     this.camera = null;
     this.controller = null;
-    this.display_frame_rate = null;
-    this.mocap_frame_rate = null;
-    this.frames = [];
+    this.frame_rate = null;
     this.paused = false;
     this.frameNum = null;
     this.d = null;
@@ -42,11 +51,17 @@ Viewer.prototype.Init = function() {    //초기화
     this.camera.position.z = 2;
     // 카메라와 마우스 상호작용을 위해 OrbitControls를 설정
     this.controller = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+    
     this.paused = false;
     this.frameNum = 0;
 }
 
-Viewer.prototype.MakeScene = function(points) {   // 모델링 함수: Scene 생성
+Viewer.prototype.ClearCanvas = function() {
+    this.renderer.clear();
+    this.Init();
+}
+
+Viewer.prototype.CreateScene = function(points) {   // 모델링 함수: Scene 생성
     // 3차원 Scene 생성
     const scene = new THREE.Scene();
 
@@ -90,13 +105,13 @@ Viewer.prototype.MakeScene = function(points) {   // 모델링 함수: Scene 생
     return scene;
 }
 
-Viewer.prototype.UpdateScene = function() {
-    const points = this.frames[parseInt(this.frameNum)];
-    const scene = this.MakeScene(points);
+Viewer.prototype.UpdateScene = function(Mocap) {
+    const points = Mocap.frames[parseInt(this.frameNum)];
+    const scene = this.CreateScene(points);
     if(!this.paused) {
         this.frameNum += this.d;
     } 
-    if(this.frameNum >= this.frames.length) {
+    if(this.frameNum >= Mocap.frames.length) {
         this.frameNum = 0;
     }
     this.controller.update();	// 카메라 컨트롤
@@ -122,9 +137,14 @@ function stop() {
 }
 
 function play() {
-    $("#playbtn").css("display", "none");
-    $("#pausebtn").css("display", "inline-block");
-    Animate();
+    try {
+        Animate();
+        $("#playbtn").css("display", "none");
+        $("#pausebtn").css({"background-image":"url(images/button_pause.png)"}); 
+        $("#pausebtn").css("display", "inline-block");
+    } catch(err) {
+        alert("Select File first");
+    }
 }
 
 // Check Display Frame Rate
@@ -139,10 +159,10 @@ function check_disFrameRate() {
             times.shift();
         }
         cancelAnimationFrame(check_req);
-        viewer.display_frame_rate = times.length;
+        viewer.frame_rate = times.length;
         
         $("#checkbtn").attr("disabled", true);
-        $("#checkbtn").attr("value", viewer.display_frame_rate);
+        $("#checkbtn").attr("value", viewer.frame_rate);
         $("#playbtn").attr("disabled", false);
     }
 }
@@ -157,6 +177,7 @@ function chk_file_format(file) {
     }
 }
 
+let animate_req = null;
 // upload file
 function upload_file() {
     const form_data = new FormData($("#file_upload")[0]);
@@ -168,23 +189,29 @@ function upload_file() {
         cache: false,
         processData: false,
         success: function(data) {
-            viewer.mocap_frame_rate = data.frame_rate;
-            viewer.frames = data.frames;
-            if(viewer.mocap_frame_rate < viewer.display_frame_rate) {
+            // Progress Bar 추가
+            $("#playbtn").css("display", "inline-block");
+            $("#pausebtn").css("display", "none");
+
+            cancelAnimationFrame(animate_req);
+            viewer.ClearCanvas();
+
+            mocap.Init(data.frame_rate, data.frames);
+            if(mocap.frame_rate < viewer.frame_rate) {
                 viewer.d = 1;
                 Animate = function() {
-                    const interval = 1000 / this.mocap_frame_rate;
+                    const interval = 1000 / mocap.frame_rate;
                     setTimeout(function() {
-                        requestAnimationFrame(Animate); // Animate만 사용시 => 애니메이션 끊김현상 발생
-                        viewer.UpdateScene();
+                        animate_req = requestAnimationFrame(Animate); // Animate만 사용시 => 애니메이션 끊김현상 발생
+                        viewer.UpdateScene(mocap);
                     }, interval);
                 }
             } else {
-                const k = Math.round(viewer.frames.length * viewer.display_frame_rate / viewer.mocap_frame_rate);
-                viewer.d = (viewer.frames.length - 1) / (k - 1);
+                const k = Math.round(mocap.frames.length * viewer.frame_rate / mocap.frame_rate);
+                viewer.d = (mocap.frames.length - 1) / (k - 1);
                 Animate = function() {
-                    requestAnimationFrame(Animate);
-                    viewer.UpdateScene();
+                    animate_req = requestAnimationFrame(Animate);
+                    viewer.UpdateScene(mocap);
                 }
             }
         }
@@ -202,14 +229,15 @@ function resizeContents() {
     
     viewer.camera.aspect = setWidth / setHeight;
     viewer.camera.updateProjectionMatrix();
-
     viewer.renderer.setSize(setWidth, setHeight);
 }
 
+var mocap = new Mocap();
 var viewer = new Viewer();
 viewer.Init();
 
 $(document).ready(function(){
     // resize 이벤트가 발생할때마다 사이즈를 조절
     $(window).resize(resizeContents);
+    resizeContents();   // 필요?
 });

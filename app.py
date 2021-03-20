@@ -1,13 +1,10 @@
 ## C3D Handler ##
 import c3d
-
-def extract(file_name):
-    path = 'uploads/' + file_name
-
-    header = c3d.Header(open(path, 'rb'))
+def extract(_file):
+    header = c3d.Header(_file)
     frame_rate = header.frame_rate
 
-    reader = c3d.Reader(open(path, 'rb'))
+    reader = c3d.Reader(_file)
     frames = []
     for i, points, analog in reader.read_frames():
         tmp = points[points[:, 4] > -1]                 # 쓰레기값(포인트) 제거
@@ -18,8 +15,6 @@ def extract(file_name):
 
 ## Flask ##
 from flask import Flask, render_template, request, send_file
-from werkzeug.utils import secure_filename
-import os
 
 app = Flask(__name__,
             static_url_path='',
@@ -33,10 +28,8 @@ def index():
 @app.route('/upload', methods=['POST']) # 접속하는 url
 def upload_file():  # 동시에 이름이 같은 파일을 2개 이상 업로드 하는 경우 문제 발생 (해결방법?)
     if request.method == 'POST':
-        f = request.files['file']
-        # 저장할 경로 + 파일명
-        f.save(os.path.join("uploads", secure_filename(f.filename)))
-        frame_rate, frames = extract(f.filename)
+        _file = request.files['file']
+        frame_rate, frames = extract(_file)
         data = {'frame_rate': frame_rate,
                 'frames': frames}
         return data
